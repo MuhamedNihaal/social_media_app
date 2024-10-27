@@ -1,123 +1,242 @@
 import {
-    ChatBubbleOutlineOutlined,
-    FavoriteBorderOutlined,
-    FavoriteOutlined,
-    ShareOutlined,
-  } from "@mui/icons-material";
-  import { Box, Divider, IconButton, Typography, useTheme } from "@mui/material";
-  import FlexBetween from "components/FlexBetween";
-  import Friend from "components/Friend";
-  import WidgetWrapper from "components/WidgetWrapper";
-  import { useState } from "react";
-  import { useDispatch, useSelector } from "react-redux";
-  import { setPost } from "state";
+  ChatBubbleOutlineOutlined,
+  FavoriteBorderOutlined,
+  FavoriteOutlined,
+  ShareOutlined,
+  SendOutlined,
+} from "@mui/icons-material";
+import {
+  Box,
+  Divider,
+  IconButton,
+  Typography,
+  useTheme,
+  TextField,
+  Button,
+} from "@mui/material";
+import FlexBetween from "components/FlexBetween";
+import Friend from "components/Friend";
+import WidgetWrapper from "components/WidgetWrapper";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { setPost } from "state";
+
+const PostWidget = ({
+  postId,
+  postUserId,
+  name,
+  description,
+  location,
+  picturePath,
+  userPicturePath,
+  likes,
+  comments: initialComments,
+}) => {
+  const [isComments, setIsComments] = useState(false);
+  const [comments, setComments] = useState(initialComments || []);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const PostWidget = ({
-    postId,
-    postUserId,
-    name,
-    description,
-    location,
-    picturePath,
-    userPicturePath,
-    likes,
-    comments,
-  }) => {
-    const [isComments, setIsComments] = useState(false);
-    const dispatch = useDispatch();
-    const token = useSelector((state) => state.token);
-    const loggedInUserId = useSelector((state) => state.user._id);
-    const isLiked = Boolean(likes[loggedInUserId]);
-    const likeCount = Object.keys(likes).length;
+  const dispatch = useDispatch();
+  const token = useSelector((state) => state.token);
+  const loggedInUserId = useSelector((state) => state.user._id);
+  const isLiked = Boolean(likes[loggedInUserId]);
+  const likeCount = Object.keys(likes).length;
+
+  const { palette } = useTheme();
+  const main = palette.neutral.main;
+  const primary = palette.primary.main;
+
+  const fetchComments = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/posts/${postId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const postData = await response.json();
+
+      console.log("Fetched Post Data: ", postData);
+      
   
-    const { palette } = useTheme();
-    const main = palette.neutral.main;
-    const primary = palette.primary.main;
-  
-    const patchLike = async () => {
-      try {
-        const response = await fetch(`http://localhost:3001/posts/${postId}/like`, {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ userId: loggedInUserId }),
-        });
-  
-        // Check if response is ok
-        if (!response.ok) {
-          throw new Error("Failed to like the post");
-        }
-  
-        const updatedPost = await response.json();
-        dispatch(setPost({ post: updatedPost }));
-      } catch (error) {
-        console.error("Error liking the post:", error);
+      // Ensure postData.comments is defined and then set it in state
+      if (postData && postData.comments) {
+        setComments(postData.comments); // assuming setFetchedComments is set up as useState
       }
-    };
-  
-    return (
-      <WidgetWrapper m="2rem 0">
-        <Friend
-          friendId={postUserId}
-          name={name}
-          subtitle={location}
-          userPicturePath={userPicturePath}
-        />
-        <Typography color={main} sx={{ mt: "1rem" }}>
-          {description}
-        </Typography>
-        {picturePath && (
-          <img
-            width="100%"
-            height="auto"
-            alt="post"
-            style={{ borderRadius: "0.75rem", marginTop: "0.75rem" }}
-            src={`http://localhost:3001/assets/${picturePath}`}
-          />
-        )}
-        <FlexBetween mt="0.25rem">
-          <FlexBetween gap="1rem">
-            <FlexBetween gap="0.3rem">
-              <IconButton onClick={patchLike}>
-                {isLiked ? (
-                  <FavoriteOutlined sx={{ color: primary }} />
-                ) : (
-                  <FavoriteBorderOutlined />
-                )}
-              </IconButton>
-              <Typography>{likeCount}</Typography>
-            </FlexBetween>
-  
-            <FlexBetween gap="0.3rem">
-              <IconButton onClick={() => setIsComments(!isComments)}>
-                <ChatBubbleOutlineOutlined />
-              </IconButton>
-              <Typography>{comments.length}</Typography>
-            </FlexBetween>
-          </FlexBetween>
-  
-          <IconButton>
-            <ShareOutlined />
-          </IconButton>
-        </FlexBetween>
-        {isComments && (
-          <Box mt="0.5rem">
-            {comments.map((comment, i) => (
-              <Box key={`${name}-${i}`}>
-                <Divider />
-                <Typography sx={{ color: main, m: "0.5rem 0", pl: "1rem" }}>
-                  {comment}
-                </Typography>
-              </Box>
-            ))}
-            <Divider />
-          </Box>
-        )}
-      </WidgetWrapper>
-    );
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+    }
   };
   
-  export default PostWidget;
-  
+  // Load comments when comments section is opened
+  useEffect(() => {
+    if (isComments) {
+      fetchComments();
+    }
+  }, [isComments]);
+
+  const patchLike = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/posts/${postId}/like`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: loggedInUserId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to like the post");
+      }
+
+      const updatedPost = await response.json();
+      dispatch(setPost({ post: updatedPost }));
+    } catch (error) {
+      console.error("Error liking the post:", error);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`http://localhost:3001/posts/${postId}/comment`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: loggedInUserId,
+          comment: newComment,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add comment");
+      }
+
+      const updatedPost = await response.json();
+      dispatch(setPost({ post: updatedPost }));
+      setNewComment(""); // Clear input after successful submission
+      fetchComments();
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Helper function to render comments properly
+  const renderComment = (comment) => {
+    // If comment is a string, render it directly
+    if (typeof comment === 'string') {
+      return comment;
+    }
+    // If comment is an object, access the appropriate property
+    // Adjust this based on your comment object structure
+    if (typeof comment === 'object' && comment !== null) {
+      return comment.text || comment.content || comment.comment || '';
+    }
+    return '';
+  };
+
+  return (
+    <WidgetWrapper m="2rem 0">
+      <Friend
+        friendId={postUserId}
+        name={name}
+        subtitle={location}
+        userPicturePath={userPicturePath}
+      />
+      <Typography color={main} sx={{ mt: "1rem" }}>
+        {description}
+      </Typography>
+      {picturePath && (
+        <img
+          width="100%"
+          height="auto"
+          alt="post"
+          style={{ borderRadius: "0.75rem", marginTop: "0.75rem" }}
+          src={`http://localhost:3001/assets/${picturePath}`}
+        />
+      )}
+      <FlexBetween mt="0.25rem">
+        <FlexBetween gap="1rem">
+          <FlexBetween gap="0.3rem">
+            <IconButton onClick={patchLike}>
+              {isLiked ? (
+                <FavoriteOutlined sx={{ color: primary }} />
+              ) : (
+                <FavoriteBorderOutlined />
+              )}
+            </IconButton>
+            <Typography>{likeCount}</Typography>
+          </FlexBetween>
+
+          <FlexBetween gap="0.3rem">
+            <IconButton onClick={() => setIsComments(!isComments)}>
+              <ChatBubbleOutlineOutlined />
+            </IconButton>
+            <Typography>{Array.isArray(comments) ? comments.length : 0}</Typography>
+          </FlexBetween>
+        </FlexBetween>
+
+        <IconButton>
+          <ShareOutlined />
+        </IconButton>
+      </FlexBetween>
+      
+      {isComments && (
+        <Box mt="0.5rem">
+          {/* Add Comment Input */}
+          <FlexBetween gap="1rem" sx={{ mb: "1rem" }}>
+            <TextField
+              fullWidth
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Write a comment..."
+              variant="outlined"
+              size="small"
+              sx={{
+                backgroundColor: palette.background.alt,
+                borderRadius: "2rem",
+                padding: "0.1rem 2rem",
+              }}
+            />
+            <Button
+              disabled={isSubmitting || !newComment.trim()}
+              onClick={handleAddComment}
+              sx={{
+                color: palette.background.alt,
+                backgroundColor: palette.primary.main,
+                borderRadius: "3rem",
+                "&:hover": {
+                  backgroundColor: palette.primary.dark,
+                },
+              }}
+              endIcon={<SendOutlined />}
+            >
+              Post
+            </Button>
+          </FlexBetween>
+
+          {/* Comments List */}
+          {Array.isArray(comments) && comments.map((comment, i) => (
+            <Box key={`${name}-${i}`}>
+              <Divider />
+              <Typography sx={{ color: main, m: "0.5rem 0", pl: "1rem" }}>
+                {renderComment(comment)}
+              </Typography>
+            </Box>
+          ))}
+          <Divider />
+        </Box>
+      )}
+    </WidgetWrapper>
+  );
+};
+
+export default PostWidget;

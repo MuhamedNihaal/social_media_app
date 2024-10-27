@@ -46,6 +46,22 @@ export const getUserPosts = async (req, res) => {
   }
 };
 
+/* READ a Single Post */
+export const getPost = async (req, res) => {
+  try {
+    const { id } = req.params; // Get the post ID from the URL
+    const post = await Post.findById(id); // Fetch the post by ID
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.status(200).json(post); // Send the post with comments
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching post", error: err.message });
+  }
+};
+
 /* UPDATE */
 export const likePost = async (req, res) => {
   try {
@@ -63,6 +79,49 @@ export const likePost = async (req, res) => {
     const updatedPost = await Post.findByIdAndUpdate(
       id,
       { likes: post.likes },
+      { new: true }
+    );
+
+    res.status(200).json(updatedPost);
+  } catch (err) {
+    res.status(404).json({ message: err.message });
+  }
+};
+
+/* ADD COMMENT */
+export const addComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, comment } = req.body;
+
+    // Find the post
+    const post = await Post.findById(id);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Find the user who is commenting
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Create the comment object with user info
+    const newComment = {
+      userId: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      comment: comment,
+      timestamp: new Date(),
+    };
+
+    // Add the comment to the post
+    post.comments.push(newComment);
+
+    // Save the updated post
+    const updatedPost = await Post.findByIdAndUpdate(
+      id,
+      { comments: post.comments },
       { new: true }
     );
 
