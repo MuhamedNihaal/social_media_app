@@ -61,7 +61,7 @@ const PostWidget = ({
   
       // Ensure postData.comments is defined and then set it in state
       if (postData && postData.comments) {
-        setComments(postData.comments); // assuming setFetchedComments is set up as useState
+        setComments(postData.comments); // assuming setComments is set up as useState
       }
     } catch (error) {
       console.error("Error fetching comments:", error);
