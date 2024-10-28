@@ -29,7 +29,13 @@ app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(morgan("common"));
 app.use(bodyParser.json({ limit: "30mb", extended: true }));
 app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }));
-app.use(cors());
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? ['https://your-client-app-url.onrender.com'] // Add your frontend URL
+        : 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true
+}));
 app.use("/assets", express.static(path.join(__dirname, 'public/assets')));
 
 /* FILE STORAGE */
@@ -60,8 +66,9 @@ mongoose
         // useUnifiedTopology: true,
     })
     .then(() => {
-        app.listen(PORT, () => {
+        app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server Listening to Port : ${PORT}`);
+            console.log(`Environment: ${process.env.NODE_ENV}`);
         });
 
         /* ADD DATA ONE TIME */
@@ -69,6 +76,5 @@ mongoose
         // Post.insertMany(posts);
     })
     .catch((err) => {
-        console.log(err);
+        console.log(`MongoDB connection error: ${err}`);
     });
-     
